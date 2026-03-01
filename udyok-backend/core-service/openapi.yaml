@@ -1,0 +1,1455 @@
+
+  /api/auth/google:
+    post:
+      tags:
+        - Authentication
+      summary: User login with Google
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - idToken
+              properties:
+                idToken:
+                  type: string
+      responses:
+        '200':
+          description: Google login successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          description: Invalid Google token
+
+  /api/auth/verify-email:
+    post:
+      tags:
+        - Authentication
+      summary: Verify email via OTP
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - otp
+              properties:
+                email:
+                  type: string
+                  format: email
+                otp:
+                  type: string
+      responses:
+        '200':
+          description: Email verified successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          description: Invalid OTP or Email
+
+openapi: 3.0.3
+info:
+  title: Udyok API
+  description: |
+    API specification for the Udyok workspace booking platform.
+    This document describes all endpoints used by the mobile application.
+  version: 1.0.0
+  contact:
+    name: Udyok Development Team
+
+servers:
+  - url: https://api.udyok.com
+    description: Production server
+  - url: http://localhost:3000
+    description: Development server
+
+tags:
+  - name: Authentication
+    description: User authentication and authorization
+  - name: User
+    description: User profile management
+  - name: Spaces
+    description: Workspace listing and management
+  - name: Bookings
+    description: Booking creation and management
+  - name: Wallet
+    description: Wallet and payment management
+  - name: Favorites
+    description: User favorites management
+  - name: Chat
+    description: Messaging and communication
+  - name: Reviews
+    description: Space reviews and ratings
+  - name: Settings
+    description: User preferences and settings
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    # Authentication Schemas
+    LoginRequest:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+          example: user@example.com
+        password:
+          type: string
+          format: password
+          example: SecurePass123
+
+    RegisterRequest:
+      type: object
+      required:
+        - name
+        - email
+        - password
+      properties:
+        name:
+          type: string
+          example: John Doe
+        email:
+          type: string
+          format: email
+          example: user@example.com
+        password:
+          type: string
+          format: password
+          example: SecurePass123
+        phone:
+          type: string
+          nullable: true
+
+    AuthResponse:
+      type: object
+      properties:
+        accessToken:
+          type: string
+          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        refreshToken:
+          type: string
+          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        user:
+          $ref: '#/components/schemas/User'
+
+    ForgotPasswordRequest:
+      type: object
+      required:
+        - email
+      properties:
+        email:
+          type: string
+          format: email
+
+    ResetPasswordRequest:
+      type: object
+      required:
+        - token
+        - password
+      properties:
+        token:
+          type: string
+        password:
+          type: string
+          format: password
+
+    # User Schemas
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          example: user_123
+        email:
+          type: string
+          format: email
+        name:
+          type: string
+        phone:
+          type: string
+          nullable: true
+        avatar:
+          type: string
+          format: uri
+          nullable: true
+        location:
+          type: string
+          nullable: true
+        isVerified:
+          type: boolean
+        isProfileComplete:
+          type: boolean
+        isOnboarded:
+          type: boolean
+
+    Owner:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        avatar:
+          type: string
+          format: uri
+          nullable: true
+        phone:
+          type: string
+          nullable: true
+        email:
+          type: string
+          format: email
+        isVerified:
+          type: boolean
+
+    UpdateProfileRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        phone:
+          type: string
+        location:
+          type: string
+        email:
+          type: string
+
+    # Space Schemas
+    SpaceListItem:
+      type: object
+      properties:
+        id:
+          type: string
+          example: space_123
+        category:
+          type: string
+        name:
+          type: string
+          example: Modern Conference Room
+        thumbnail:
+          type: string
+          format: uri
+        pricePerHour:
+          type: number
+          format: float
+        currency:
+          type: string
+        rating:
+          type: number
+          format: float
+        totalReviews:
+          type: integer
+        distanceKm:
+          type: number
+          format: float
+          nullable: true
+        travelTimeMin:
+          type: number
+          format: float
+          nullable: true
+        city:
+          type: string
+        isOpenNow:
+          type: boolean
+        isFavorite:
+          type: boolean
+
+    SpaceDetail:
+      allOf:
+        - $ref: '#/components/schemas/SpaceListItem'
+        - type: object
+          properties:
+            description:
+              type: string
+            images:
+              type: array
+              items:
+                type: string
+                format: uri
+            amenities:
+              type: array
+              items:
+                type: string
+            location:
+              type: object
+              properties:
+                address:
+                  type: string
+                city:
+                  type: string
+                lat:
+                  type: number
+                lng:
+                  type: number
+            owner:
+              $ref: '#/components/schemas/Owner'
+            schedule:
+              type: object
+              properties:
+                openDays:
+                  type: array
+                  items:
+                    type: integer
+                openTime:
+                  type: string
+                closeTime:
+                  type: string
+
+    SpaceListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/SpaceListItem'
+        total:
+          type: integer
+        page:
+          type: integer
+        limit:
+          type: integer
+        totalPages:
+          type: integer
+
+    CreateSpaceRequest:
+      type: object
+      required:
+        - name
+        - description
+        - price
+        - location
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        price:
+          type: number
+        images:
+          type: array
+          items:
+            type: string
+        amenities:
+          type: array
+          items:
+            type: string
+        location:
+          type: string
+
+    # Booking Schemas
+    Booking:
+      type: object
+      properties:
+        id:
+          type: string
+        userId:
+          type: string
+        spaceId:
+          type: string
+        startDate:
+          type: string
+          format: date-time
+        endDate:
+          type: string
+          format: date-time
+        startTime:
+          type: string
+          example: "14:00"
+        endTime:
+          type: string
+          status:
+            type: string
+            enum: [pending, confirmed, cancelled, completed]
+          paymentMethodId:
+            type: string
+            nullable: true
+          totalAmount:
+            type: number
+            format: float
+          notes:
+            type: string
+            nullable: true
+
+    CreateBookingRequest:
+      type: object
+      required:
+        - spaceId
+        - startDate
+        - endDate
+        - startTime
+        - endTime
+      properties:
+        spaceId:
+          type: string
+        startDate:
+          type: string
+          format: date-time
+        endDate:
+          type: string
+          format: date-time
+        startTime:
+          type: string
+        endTime:
+          type: string
+        paymentMethodId:
+          type: string
+        notes:
+          type: string
+
+    UpdateBookingRequest:
+      type: object
+      properties:
+        startDate:
+          type: string
+          format: date-time
+        endDate:
+          type: string
+          format: date-time
+        startTime:
+          type: string
+        endTime:
+          type: string
+        notes:
+          type: string
+
+    # Wallet Schemas
+    PaymentMethod:
+      type: object
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+          enum: [card, upi, wallet]
+        details:
+          type: string
+        isDefault:
+          type: boolean
+
+    WalletBalance:
+      type: object
+      properties:
+        balance:
+          type: number
+          format: float
+
+    Transaction:
+      type: object
+      properties:
+        id:
+          type: string
+        amount:
+          type: number
+          format: float
+        type:
+          type: string
+          enum: [credit, debit]
+        description:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum: [pending, completed, failed]
+
+    AddFundsRequest:
+      type: object
+      required:
+        - amount
+        - paymentMethodId
+      properties:
+        amount:
+          type: number
+        paymentMethodId:
+          type: string
+
+    # Favorites Schemas
+    FavoritesResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/SpaceListItem'
+        total:
+          type: integer
+        page:
+          type: integer
+        limit:
+          type: integer
+        totalPages:
+          type: integer
+
+    # Chat Schemas
+    Chat:
+      type: object
+      properties:
+        id:
+          type: string
+        participantId:
+          type: string
+        participantName:
+          type: string
+        participantAvatar:
+          type: string
+          format: uri
+        lastMessage:
+          type: string
+          nullable: true
+        lastMessageTime:
+          type: string
+          format: date-time
+          nullable: true
+        unreadCount:
+          type: integer
+        isOnline:
+          type: boolean
+
+    Message:
+      type: object
+      properties:
+        id:
+          type: string
+        chatId:
+          type: string
+        senderId:
+          type: string
+        text:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+        read:
+          type: boolean
+
+    SendMessageRequest:
+      type: object
+      required:
+        - text
+      properties:
+        text:
+          type: string
+
+    # Review Schemas
+    Review:
+      type: object
+      properties:
+        reviewId:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+        rating:
+          type: number
+          format: float
+        images:
+          type: array
+          items:
+            type: string
+            format: uri
+        createdAt:
+          type: string
+          format: date-time
+        user:
+          type: object
+          properties:
+            userId:
+              type: string
+            username:
+              type: string
+            userImage:
+              type: string
+              format: uri
+
+    WriteReviewRequest:
+      type: object
+      required:
+        - title
+        - description
+        - rating
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        rating:
+          type: number
+          format: float
+        images:
+          type: array
+          items:
+            type: string
+            format: uri
+
+    WriteReviewResponse:
+      type: object
+      properties:
+        reviewId:
+          type: string
+        message:
+          type: string
+
+    SpaceReviewResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Review'
+        total:
+          type: integer
+        page:
+          type: integer
+        limit:
+          type: integer
+        totalPages:
+          type: integer
+
+    # Settings Schemas
+    Settings:
+      type: object
+      properties:
+        theme:
+          type: string
+          enum: [light, dark]
+        notifications:
+          type: boolean
+        language:
+          type: string
+        timezone:
+          type: string
+        emailNotifications:
+          type: boolean
+        smsNotifications:
+          type: boolean
+
+    UpdateSettingsRequest:
+      type: object
+      properties:
+        theme:
+          type: string
+          enum: [light, dark]
+        notifications:
+          type: boolean
+        language:
+          type: string
+        timezone:
+          type: string
+        emailNotifications:
+          type: boolean
+        smsNotifications:
+          type: boolean
+
+    # Common Schemas
+    Error:
+      type: object
+      properties:
+        message:
+          type: string
+        code:
+          type: string
+        details:
+          type: object
+
+paths:
+  # Authentication Endpoints
+  /auth/login:
+    post:
+      tags:
+        - Authentication
+      summary: User login
+      description: Authenticate user and receive JWT token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/register:
+    post:
+      tags:
+        - Authentication
+      summary: User registration
+      description: Create a new user account
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: Registration successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          description: Invalid input or user already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/forgot-password:
+    post:
+      tags:
+        - Authentication
+      summary: Request password reset
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ForgotPasswordRequest'
+      responses:
+        '200':
+          description: Password reset email sent
+        '404':
+          description: User not found
+
+  /auth/reset-password:
+    post:
+      tags:
+        - Authentication
+      summary: Reset password with token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResetPasswordRequest'
+      responses:
+        '200':
+          description: Password reset successful
+        '400':
+          description: Invalid or expired token
+
+  /auth/refresh:
+    post:
+      tags:
+        - Authentication
+      summary: Refresh access token
+      description: Get a new access token using refresh token
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Token refreshed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  accessToken:
+                    type: string
+                  refreshToken:
+                    type: string
+        '401':
+          description: Invalid refresh token
+
+  # User Endpoints
+  /users/me:
+    get:
+      tags:
+        - User
+      summary: Get current user profile
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: User profile retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          description: Unauthorized
+
+    patch:
+      tags:
+        - User
+      summary: Update user profile
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateProfileRequest'
+      responses:
+        '200':
+          description: Profile updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+
+  /users/me/avatar:
+    post:
+      tags:
+        - User
+      summary: Upload user avatar
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                avatar:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: Avatar uploaded
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  avatarUrl:
+                    type: string
+
+  # Spaces Endpoints
+  /spaces:
+    get:
+      tags:
+        - Spaces
+      summary: List spaces with pagination and filters
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: location
+          in: query
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+        - name: query
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Spaces retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SpaceListResponse'
+
+    post:
+      tags:
+        - Spaces
+      summary: Create a new space
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSpaceRequest'
+      responses:
+        '201':
+          description: Space created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SpaceListItem'
+
+  /spaces/{id}:
+    get:
+      tags:
+        - Spaces
+      summary: Get space details
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Space details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SpaceDetail'
+        '404':
+          description: Space not found
+
+    patch:
+      tags:
+        - Spaces
+      summary: Update space
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSpaceRequest'
+      responses:
+        '200':
+          description: Space updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SpaceListItem'
+
+    delete:
+      tags:
+        - Spaces
+      summary: Delete space
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Space deleted
+
+  # Reviews Endpoints
+  /spaces/{id}/reviews:
+    get:
+      tags:
+        - Reviews
+      summary: Get space reviews
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+      responses:
+        '200':
+          description: Reviews retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SpaceReviewResponse'
+
+    post:
+      tags:
+        - Reviews
+      summary: Create a review for a space
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WriteReviewRequest'
+      responses:
+        '201':
+          description: Review created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WriteReviewResponse'
+
+  # Bookings Endpoints
+  /bookings:
+    get:
+      tags:
+        - Bookings
+      summary: List user bookings
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending, confirmed, cancelled, completed]
+        - name: startDate
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: endDate
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Bookings retrieved
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Booking'
+
+    post:
+      tags:
+        - Bookings
+      summary: Create a new booking
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateBookingRequest'
+      responses:
+        '201':
+          description: Booking created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Booking'
+
+  /bookings/{id}:
+    get:
+      tags:
+        - Bookings
+      summary: Get booking details
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Booking details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Booking'
+
+    patch:
+      tags:
+        - Bookings
+      summary: Update booking
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateBookingRequest'
+      responses:
+        '200':
+          description: Booking updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Booking'
+
+    delete:
+      tags:
+        - Bookings
+      summary: Cancel booking
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Booking cancelled
+
+  # Wallet Endpoints
+  /wallet/balance:
+    get:
+      tags:
+        - Wallet
+      summary: Get wallet balance
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Wallet balance
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WalletBalance'
+
+  /wallet/transactions:
+    get:
+      tags:
+        - Wallet
+      summary: Get transaction history
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Transactions retrieved
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Transaction'
+
+  /wallet/add-funds:
+    post:
+      tags:
+        - Wallet
+      summary: Add funds to wallet
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddFundsRequest'
+      responses:
+        '200':
+          description: Funds added
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WalletBalance'
+
+  /wallet/payment-methods:
+    get:
+      tags:
+        - Wallet
+      summary: List payment methods
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Payment methods retrieved
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PaymentMethod'
+
+    post:
+      tags:
+        - Wallet
+      summary: Add payment method
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                type:
+                  type: string
+                  enum: [card, upi, wallet]
+                details:
+                  type: string
+      responses:
+        '201':
+          description: Payment method added
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentMethod'
+
+  /wallet/payment-methods/{id}:
+    delete:
+      tags:
+        - Wallet
+      summary: Remove payment method
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Payment method removed
+
+  /wallet/payment-methods/{id}/default:
+    patch:
+      tags:
+        - Wallet
+      summary: Set default payment method
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Default payment method updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentMethod'
+
+  # Favorites Endpoints
+  /favorites:
+    get:
+      tags:
+        - Favorites
+      summary: Get user favorites
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          schema:
+            type: integer
+        - name: query
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Favorites retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FavoritesResponse'
+
+  /favorites/{spaceId}:
+    post:
+      tags:
+        - Favorites
+      summary: Add space to favorites
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: spaceId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Added to favorites
+
+    delete:
+      tags:
+        - Favorites
+      summary: Remove space from favorites
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: spaceId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Removed from favorites
+
+  # Chat Endpoints
+  /chats:
+    get:
+      tags:
+        - Chat
+      summary: List user chats
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Chats retrieved
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Chat'
+
+  /chats/{chatId}/messages:
+    get:
+      tags:
+        - Chat
+      summary: Get chat messages
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: chatId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Messages retrieved
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Message'
+
+    post:
+      tags:
+        - Chat
+      summary: Send message
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: chatId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SendMessageRequest'
+      responses:
+        '201':
+          description: Message sent
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+
+  /chats/{chatId}/read:
+    patch:
+      tags:
+        - Chat
+      summary: Mark messages as read
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: chatId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Messages marked as read
+
+  # Settings Endpoints
+  /settings:
+    get:
+      tags:
+        - Settings
+      summary: Get user settings
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Settings retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Settings'
+
+    patch:
+      tags:
+        - Settings
+      summary: Update user settings
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateSettingsRequest'
+      responses:
+        '200':
+          description: Settings updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Settings'

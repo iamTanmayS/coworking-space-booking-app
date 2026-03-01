@@ -1,0 +1,55 @@
+version: '3.8'
+
+services:
+  api-gateway:
+    build:
+      context: ./api-gateway
+    ports:
+      - "8000:8000"
+    environment:
+      - PORT=8000
+      - CORE_SERVICE_URL=http://core-service:4000
+      - CHAT_SERVICE_URL=http://chat-service:4001
+    depends_on:
+      - core-service
+      - chat-service
+    networks:
+      - udyok-backend-network
+
+  core-service:
+    build:
+      context: ./core-service
+    ports:
+      - "4000:4000"
+    environment:
+      - PORT=4000
+      - DATABASE_URL=${DATABASE_URL}
+      - WEB_CLIENT_ID=${WEB_CLIENT_ID}
+      - WEB_CLIENT_SECRET=${WEB_CLIENT_SECRET}
+      - ANDROID_CLIENT_ID=${ANDROID_CLIENT_ID}
+      - JWT_SECRET=${JWT_SECRET}
+      - JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET}
+      - SMTP_HOST=${SMTP_HOST}
+      - SMTP_PORT=${SMTP_PORT}
+      - SMTP_USER=${SMTP_USER}
+      - SMTP_PASS=${SMTP_PASS}
+      - STRIPE_CLIENT_SECRET=${STRIPE_CLIENT_SECRET}
+    networks:
+      - udyok-backend-network
+
+  chat-service:
+    build:
+      context: ./chat-service
+    ports:
+      - "4001:4001"
+    environment:
+      - PORT=4001
+      - DATABASE_URL=${MONGO_URI}
+      - JWT_SECRET=${JWT_SECRET}
+      - JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET}
+    networks:
+      - udyok-backend-network
+
+networks:
+  udyok-backend-network:
+    driver: bridge
