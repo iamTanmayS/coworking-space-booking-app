@@ -24,5 +24,6 @@ export const env = {
     smtp_pass: process.env.SMTP_PASS || "",
     google_web_client_id: getEnv("WEB_CLIENT_ID"),
     google_android_client_id: getEnv("ANDROID_CLIENT_ID"),
-    stripe_client_secret: getEnv("STRIPE_CLIENT_SECRET")
+    stripe_client_secret: getEnv("STRIPE_CLIENT_SECRET"),
+    resend_api_key: process.env.RESEND_API_KEY || "",
 }
