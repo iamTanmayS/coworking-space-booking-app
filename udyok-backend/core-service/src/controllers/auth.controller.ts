@@ -92,7 +92,7 @@ export const verifyEmail = async (req: Request, res: Response) => {
 
         // 2. Update user as verified
         const userResult = await pool.query(
-            `UPDATE users SET email_verified = true WHERE email = $1 RETURNING id, email`,
+            `UPDATE users SET email_verified = true WHERE email = $1 RETURNING id, email, name`,
             [email]
         );
 
@@ -199,42 +199,69 @@ export const googleAuth = async (req: Request, res: Response) => {
 
         const { email, name, sub: googleId, picture } = payload;
 
-        // 2. Check if user exists
+        // 2. Try to find existing user first
         let userResult = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
-        let user;
 
-        if (userResult.rows.length === 0) {
-            // Create new user for Google Auth
-            userResult = await pool.query(
-                `INSERT INTO users (name, email, provider, provider_user_id, email_verified, profile_image) 
-         VALUES ($1, $2, 'google', $3, true, $4) RETURNING id, email, name`,
-                [name, email, googleId, picture]
-            );
-            user = userResult.rows[0];
-
-            // Fire Welcome Email asynchronously for new Google users
-            sendWelcomeEmail(user.email, user.name).catch(console.error);
-        } else {
-            user = userResult.rows[0];
-            // Note: If they previously signed up with Email, could conditionally link account 
-            // or throw an error based on your preference. For now, we prefer not to overlap.
-            if (user.provider === 'email') {
-                res.status(400).json({ error: 'This email is already registered with a password.' });
+        if (userResult.rows.length > 0) {
+            const existingUser = userResult.rows[0];
+            // If user signed up with email+password, block Google login on that account
+            if (existingUser.provider === 'email') {
+                res.status(400).json({ error: 'This email is already registered with a password. Please sign in with your email and password.' });
                 return;
             }
+            // Existing Google user — log them in
+            const tokens = generateTokens({ userId: existingUser.id, email: existingUser.email });
+            res.status(200).json({ message: 'Google login successful', ...tokens });
+            return;
         }
 
-        // 3. Generate tokens
-        const tokens = generateTokens({ userId: user.id, email: user.email });
+        // 3. New user — insert with ON CONFLICT guard to avoid race conditions
+        const insertResult = await pool.query(
+            `INSERT INTO users (name, email, provider, provider_user_id, email_verified, profile_image) 
+             VALUES ($1, $2, 'google', $3, true, $4) 
+             ON CONFLICT (email) DO NOTHING
+             RETURNING id, email, name`,
+            [name, email, googleId, picture]
+        );
+
+        if (insertResult.rows.length === 0) {
+            // Another request beat us to it — re-fetch the user
+            userResult = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
+            const raceUser = userResult.rows[0];
+            if (!raceUser) {
+                res.status(500).json({ error: 'Failed to create user account' });
+                return;
+            }
+            if (raceUser.provider === 'email') {
+                res.status(400).json({ error: 'This email is already registered with a password. Please sign in with your email and password.' });
+                return;
+            }
+            const tokens = generateTokens({ userId: raceUser.id, email: raceUser.email });
+            res.status(200).json({ message: 'Google login successful', ...tokens });
+            return;
+        }
+
+        const newUser = insertResult.rows[0];
+        // Fire Welcome Email asynchronously for new Google users
+        sendWelcomeEmail(newUser.email, newUser.name).catch(console.error);
+
+        // 4. Generate tokens
+        const tokens = generateTokens({ userId: newUser.id, email: newUser.email });
         res.status(200).json({
             message: 'Google login successful',
             ...tokens,
         });
-    } catch (error) {
+    } catch (error: any) {
+        // Handle unique constraint violation gracefully
+        if (error.code === '23505') {
+            res.status(400).json({ error: 'This email is already registered. Please sign in with your email and password.' });
+            return;
+        }
         console.error('Google Auth error:', error);
         res.status(500).json({ error: 'Failed to authenticate with Google' });
     }
 };
+
 
 export const forgotPassword = async (req: Request, res: Response) => {
     const { email } = req.body;
@@ -306,12 +333,43 @@ export const resetPassword = async (req: Request, res: Response) => {
 };
 
 export const refresh = async (req: Request, res: Response) => {
-    // Basic implementation since JWT strategy details might vary
-    res.status(200).json({
-        accessToken: "new-access-token",
-        refreshToken: "new-refresh-token"
-    });
+    const { refreshToken } = req.body;
+
+    if (!refreshToken) {
+        res.status(400).json({ error: 'Refresh token is required' });
+        return;
+    }
+
+    try {
+        // Verify the refresh token using the refresh secret
+        const { verifyRefreshToken } = await import('../utils/jwt.util.js');
+        const payload = verifyRefreshToken(refreshToken);
+
+        if (!payload) {
+            res.status(401).json({ error: 'Invalid or expired refresh token' });
+            return;
+        }
+
+        // Confirm the user still exists in the database
+        const userResult = await pool.query(
+            'SELECT id, email FROM users WHERE id = $1',
+            [payload.userId]
+        );
+
+        if (userResult.rows.length === 0) {
+            res.status(401).json({ error: 'User not found' });
+            return;
+        }
+
+        // Issue a fresh token pair
+        const tokens = generateTokens({ userId: payload.userId, email: payload.email });
+        res.status(200).json(tokens);
+    } catch (error) {
+        console.error('Token refresh error:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
 };
+
 
 export const resendCode = async (req: Request, res: Response) => {
     const { email } = req.body;

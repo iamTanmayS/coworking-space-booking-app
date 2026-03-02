@@ -12,6 +12,6 @@ router.post('/login', login);
 router.post('/google', googleAuth);
 router.post('/forgot-password', forgotPassword);
 router.post('/reset-password', resetPassword);
-router.post('/refresh', authenticate, refresh);
+router.post('/refresh', refresh);
 
 export default router;

@@ -1,6 +1,7 @@
 import type { Response } from 'express';
 import pool from '../config/db/db.js';
 import type { AuthRequest } from '../middlewares/auth.middleware.js';
+import bcrypt from 'bcrypt';
 
 export const getMe = async (req: AuthRequest, res: Response) => {
     try {
@@ -140,6 +141,68 @@ export const updateLocation = async (req: AuthRequest, res: Response) => {
         });
     } catch (error) {
         console.error('Update location error:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+};
+
+export const changePassword = async (req: AuthRequest, res: Response) => {
+    try {
+        const userId = req.user?.userId;
+        const { currentPassword, newPassword } = req.body;
+
+        if (!userId) {
+            res.status(401).json({ error: 'Unauthorized' });
+            return;
+        }
+
+        if (!currentPassword || !newPassword) {
+            res.status(400).json({ error: 'Current password and new password are required' });
+            return;
+        }
+
+        if (newPassword.length < 8) {
+            res.status(400).json({ error: 'New password must be at least 8 characters' });
+            return;
+        }
+
+        // Fetch user's current provider and password hash
+        const userResult = await pool.query(
+            'SELECT provider, password_hash FROM users WHERE id = $1',
+            [userId]
+        );
+
+        if (userResult.rows.length === 0) {
+            res.status(404).json({ error: 'User not found' });
+            return;
+        }
+
+        const user = userResult.rows[0];
+
+        // Google users don't have a password
+        if (user.provider !== 'email') {
+            res.status(400).json({ error: 'Password change is only available for email accounts.' });
+            return;
+        }
+
+        // Verify current password
+        const isValid = await bcrypt.compare(currentPassword, user.password_hash);
+        if (!isValid) {
+            res.status(400).json({ error: 'Current password is incorrect' });
+            return;
+        }
+
+        // Hash and save the new password
+        const salt = await bcrypt.genSalt(10);
+        const newHash = await bcrypt.hash(newPassword, salt);
+
+        await pool.query(
+            'UPDATE users SET password_hash = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
+            [newHash, userId]
+        );
+
+        res.status(200).json({ message: 'Password changed successfully' });
+    } catch (error) {
+        console.error('Change password error:', error);
         res.status(500).json({ error: 'Internal server error' });
     }
 };
