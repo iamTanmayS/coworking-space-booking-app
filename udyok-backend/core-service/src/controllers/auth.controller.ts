@@ -4,7 +4,7 @@ import { OAuth2Client } from 'google-auth-library';
 import pool from '../config/db/db.js';
 import { env } from '../config/config.js';
 import { generateTokens } from '../utils/jwt.util.js';
-import { sendOTP } from '../services/email.service.js';
+import { sendOTP, sendWelcomeEmail } from '../services/email.service.js';
 
 const googleClient = new OAuth2Client(env.google_web_client_id);
 
@@ -52,8 +52,8 @@ export const register = async (req: Request, res: Response) => {
             [email, otp, expiresAt]
         );
 
-        // 5. Send Email
-        await sendOTP(email, otp);
+        // 5. Send Email asynchronously (don't block the request)
+        sendOTP(email, otp).catch(console.error);
 
         res.status(201).json({
             message: 'Registration successful. Please check your email for the OTP.',
@@ -108,6 +108,9 @@ export const verifyEmail = async (req: Request, res: Response) => {
         // 4. Clean up OTPs
         await pool.query(`DELETE FROM otps WHERE email = $1`, [email]);
 
+        // 5. Fire Welcome Email asynchronously (don't block the request)
+        sendWelcomeEmail(user.email, user.name).catch(console.error);
+
         res.status(200).json({
             message: 'Email verified successfully',
             ...tokens,
@@ -147,7 +150,21 @@ export const login = async (req: Request, res: Response) => {
         }
 
         if (!user.email_verified) {
-            res.status(403).json({ error: 'Please verify your email before logging in' });
+            // Automatically generate a new OTP and send it
+            const otp = generateRandomOTP();
+            const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 mins
+
+            await pool.query(
+                `INSERT INTO otps (email, otp, expires_at) VALUES ($1, $2, $3)`,
+                [user.email, otp, expiresAt]
+            );
+
+            await sendOTP(user.email, otp);
+
+            res.status(403).json({
+                error: 'UNVERIFIED_EMAIL',
+                message: 'Please verify your email before logging in. A new code has been sent.'
+            });
             return;
         }
 
@@ -190,10 +207,13 @@ export const googleAuth = async (req: Request, res: Response) => {
             // Create new user for Google Auth
             userResult = await pool.query(
                 `INSERT INTO users (name, email, provider, provider_user_id, email_verified, profile_image) 
-         VALUES ($1, $2, 'google', $3, true, $4) RETURNING id, email`,
+         VALUES ($1, $2, 'google', $3, true, $4) RETURNING id, email, name`,
                 [name, email, googleId, picture]
             );
             user = userResult.rows[0];
+
+            // Fire Welcome Email asynchronously for new Google users
+            sendWelcomeEmail(user.email, user.name).catch(console.error);
         } else {
             user = userResult.rows[0];
             // Note: If they previously signed up with Email, could conditionally link account 
@@ -239,7 +259,7 @@ export const forgotPassword = async (req: Request, res: Response) => {
             [email, otp, expiresAt]
         );
 
-        await sendOTP(email, otp); // In reality this would be a reset link, but reusing OTP for now
+        sendOTP(email, otp).catch(console.error); // In reality this would be a reset link, but reusing OTP for now
 
         res.status(200).json({ message: 'If that email exists, a password reset link has been sent.' });
     } catch (error) {
@@ -315,7 +335,7 @@ export const resendCode = async (req: Request, res: Response) => {
             [email, otp, expiresAt]
         );
 
-        await sendOTP(email, otp);
+        sendOTP(email, otp).catch(console.error);
 
         res.status(200).json({ message: 'OTP resent successfully' });
     } catch (error) {

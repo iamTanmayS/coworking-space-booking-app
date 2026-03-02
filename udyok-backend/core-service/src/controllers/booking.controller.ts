@@ -116,6 +116,26 @@ export const createBooking = async (req: AuthRequest, res: Response) => {
             return;
         }
 
+        // --- Wallet Balance Check ---
+        if (paymentMethodId === 'wallet') {
+            const balanceResult = await client.query(
+                `SELECT 
+                    SUM(CASE WHEN type = 'credit' THEN amount ELSE 0 END) -
+                    SUM(CASE WHEN type = 'debit' THEN amount ELSE 0 END) 
+                 AS balance
+                 FROM transactions WHERE user_id = $1 AND status = 'completed'`,
+                [userId]
+            );
+
+            const balance = parseFloat(balanceResult.rows[0].balance || '0');
+
+            if (balance < totalAmount) {
+                await client.query('ROLLBACK');
+                res.status(400).json({ error: 'Insufficient wallet balance' });
+                return;
+            }
+        }
+
         // Create the booking
         const result = await client.query(
             `INSERT INTO bookings (user_id, space_id, start_time, end_time, total_amount, notes, status)
