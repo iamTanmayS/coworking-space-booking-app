@@ -1,5 +1,5 @@
 {
-  "name": "chat-service",
+  "name": "core-service",
   "version": "1.0.0",
   "type": "module",
   "scripts": {
