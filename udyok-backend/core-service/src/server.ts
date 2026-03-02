@@ -13,6 +13,7 @@ import favoriteRoutes from "./routes/favorite.routes.js";
 import settingsRoutes from "./routes/settings.routes.js";
 
 const app = express();
+app.set('trust proxy', 1);
 const stripe = new Stripe(env.stripe_client_secret);
 
 app.use(cors());

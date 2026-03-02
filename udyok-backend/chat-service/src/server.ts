@@ -10,6 +10,7 @@ import { setupSocketHandlers } from './controllers/socket.controller.js';
 dotenv.config();
 
 const app = express();
+app.set('trust proxy', 1);
 const server = http.createServer(app);
 
 // Enable CORS for API Gateway and direct WebSocket connections
