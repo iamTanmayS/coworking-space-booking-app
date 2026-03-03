@@ -1,0 +1,29 @@
+{
+  "cli": {
+    "version": ">= 18.0.6",
+    "appVersionSource": "remote"
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal"
+    },
+    "preview": {
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://coworking-space-booking-app-core-service-vf1l.onrender.com",
+        "EXPO_PUBLIC_ENV": "development",
+        "EXPO_PUBLIC_CHAT_URL": "https://coworking-space-booking-app-chat-service.onrender.com"
+      }
+    },
+    "production": {
+      "autoIncrement": true
+    }
+  },
+  "submit": {
+    "production": {}
+  }
+}

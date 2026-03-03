@@ -1,0 +1,217 @@
+# Schema Design & Data Models
+
+This document outlines the current data models and API contracts implemented in the Udyok application.
+
+## 1. Authentication
+
+### Models
+```typescript
+interface LoginRequest {
+  email: string;
+  password: string;
+}
+
+interface RegisterRequest {
+  email: string;
+  password: string;
+  name: string;
+  phone?: string;
+}
+
+interface AuthResponse {
+  accessToken: string;
+  refreshToken: string;
+  user: User;
+}
+
+interface VerifyCodeRequest {
+  email: string;
+  otp: string;
+}
+```
+
+## 2. User
+
+### Models
+```typescript
+interface User {
+  id: string;
+  email: string;
+  name: string;
+  phone?: string;
+  avatar?: string;
+  location?: string | null;
+  isVerified: boolean;
+  isProfileComplete: boolean;
+  isOnboarded: boolean;
+}
+
+interface UpdateProfileRequest {
+  name?: string;
+  phone?: string;
+  location?: string;
+  email?: string;
+}
+```
+
+## 3. Spaces
+
+### Models
+```typescript
+interface SpaceListItem {
+  id: string;
+  category: string;
+  name: string;
+  thumbnail: string;
+  pricePerHour: number;
+  currency: string;
+  rating: number;
+  totalReviews: number;
+  distanceKm?: number;
+  travelTimeMin?: number;
+  city: string;
+  isOpenNow: boolean;
+  isFavorite: boolean;
+}
+
+interface SpaceDetail extends SpaceListItem {
+  description: string;
+  images: string[];
+  amenities: string[];
+  location: {
+    address: string;
+    city: string;
+    lat: number;
+    lng: number;
+  };
+  owner: {
+    id: string;
+    name: string;
+    avatar: string;
+  };
+  schedule: {
+    openDays: number[];
+    openTime: string;
+    closeTime: string;
+  };
+}
+```
+
+## 4. Bookings
+
+### Models
+```typescript
+interface Booking {
+  id: string;
+  userId: string;
+  spaceId: string;
+  startDate: string; // ISO Date
+  endDate: string; // ISO Date
+  startTime: string; // HH:mm
+  endTime: string; // HH:mm
+  status: 'pending' | 'confirmed' | 'cancelled' | 'completed';
+  paymentMethodId?: string;
+  totalAmount: number;
+  notes?: string;
+}
+
+interface CreateBookingRequest {
+  spaceId: string;
+  startDate: string;
+  endDate: string;
+  startTime: string;
+  endTime: string;
+  paymentMethodId?: string;
+  notes?: string;
+}
+```
+
+## 5. Reviews
+
+### Models
+```typescript
+interface Review {
+  reviewId: string;
+  title: string;
+  description: string;
+  rating: number;
+  images: string[];
+  createdAt: string;
+  user: {
+    userId: string;
+    username: string;
+    userImage: string;
+  };
+}
+
+interface WriteReviewRequest {
+  title: string;
+  description: string;
+  rating: number;
+  images?: string[];
+}
+```
+
+## 6. Wallet
+
+### Models
+```typescript
+interface WalletBalance {
+  balance: number;
+}
+
+interface Transaction {
+  id: string;
+  amount: number;
+  type: 'credit' | 'debit';
+  description: string;
+  timestamp: string;
+  status: 'pending' | 'completed' | 'failed';
+}
+
+interface PaymentMethod {
+  id: string;
+  type: 'card' | 'upi' | 'wallet';
+  details: string;
+  isDefault: boolean;
+}
+```
+
+## 7. Chat
+
+### Models
+```typescript
+interface Chat {
+  id: string;
+  participantId: string;
+  participantName: string;
+  participantAvatar: string;
+  lastMessage?: string;
+  lastMessageTime?: string;
+  unreadCount: number;
+  isOnline: boolean;
+}
+
+interface Message {
+  id: string;
+  chatId: string;
+  senderId: string;
+  text: string;
+  timestamp: string;
+  read: boolean;
+}
+```
+
+## 8. Settings
+
+### Models
+```typescript
+interface Settings {
+  theme: 'light' | 'dark';
+  notifications: boolean;
+  language: string;
+  timezone: string;
+  emailNotifications: boolean;
+  smsNotifications: boolean;
+}
+```

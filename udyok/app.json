@@ -1,0 +1,57 @@
+{
+  "expo": {
+    "name": "udyok",
+    "slug": "udyok",
+    "version": "1.0.0",
+    "scheme": "udyok",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/adaptive_icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#1AB65C"
+    },
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/icon.png",
+        "backgroundColor": "#1AB65C"
+      },
+      "edgeToEdgeEnabled": true,
+      "predictiveBackGestureEnabled": false,
+      "package": "com.anonymous.udyok"
+    },
+    "web": {
+      "favicon": "./assets/icon.png"
+    },
+    "plugins": [
+      [
+        "@stripe/stripe-react-native",
+        {
+          "merchantIdentifier": "merchant.com.udyok.app",
+          "enableGooglePay": false
+        }
+      ],
+      "expo-web-browser",
+      "expo-notifications",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "usesCleartextTraffic": true
+          }
+        }
+      ],
+      "@react-native-google-signin/google-signin"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "d0fd553e-3ec5-41df-8c11-2ea5233e641b"
+      }
+    }
+  }
+}

@@ -1,0 +1,20 @@
+﻿env: load .env
+env: export EXPO_PUBLIC_API_URL EXPO_PUBLIC_CHAT_URL EXPO_PUBLIC_ENV
+Running 17 checks on your project...
+16/17 checks passed. 1 checks failed. Possible issues detected:
+Use the --verbose flag to see more details about passed checks.
+
+Γ£û Check that packages match versions required by installed Expo SDK
+
+Γ¥ù Major version mismatches
+package                expected  found   
+expo-build-properties  ~1.0.10   0.14.8  
+
+Changelogs:
+- expo-build-properties ΓåÆ https://github.com/expo/expo/blob/sdk-54/packages/expo-build-properties/CHANGELOG.md
+
+1 package out of date.
+Advice:
+Use 'npx expo install --check' to review and upgrade your dependencies.
+To ignore specific packages, add them to "expo.install.exclude" in package.json. Learn more: https://expo.fyi/dependency-validation
+

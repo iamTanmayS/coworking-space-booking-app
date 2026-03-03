@@ -1,0 +1,8 @@
+﻿src/api/usage-examples.tsx(15,49): error TS2305: Module '"../features/chat/chat.api"' has no exported member 'useSendMessageMutation'.
+src/features/chat/Chat.slice.ts(23,43): error TS2339: Property 'chatId' does not exist on type 'Message'.
+src/screens/auth/Location.tsx(331,39): error TS2551: Property 'semibold' does not exist on type '{ regular: string; medium: string; semiBold: string; bold: string; }'. Did you mean 'semiBold'?
+src/screens/onboarding/GetStarted.tsx(10,79): error TS2344: Type '"Onboarding"' does not satisfy the constraint 'keyof AuthStackParamList'.
+src/services/mockApiService.ts(178,13): error TS2353: Object literal may only specify known properties, and 'id' does not exist in type 'Message'.
+src/services/mockApiService.ts(192,54): error TS2339: Property 'id' does not exist on type 'Chat'.
+src/services/mockApiService.ts(203,54): error TS2339: Property 'id' does not exist on type 'Chat'.
+src/services/mockApiService.ts(205,34): error TS2551: Property 'unreadCount' does not exist on type 'Chat'. Did you mean 'unreadCounts'?
